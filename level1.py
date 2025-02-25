@@ -1,3 +1,4 @@
+# level1.py
 import pygame
 import random
 
@@ -13,6 +14,7 @@ BLUE = (0, 0, 255)
 WHITE_BLUE = (111, 136, 204)
 DARK_BLUE = (86, 83, 131)
 LIGHT_BLUE = (197, 216, 235)
+GREEN = (0, 255, 0)
 
 # Ініціалізація Pygame
 pygame.init()
@@ -28,10 +30,9 @@ bullet_img = pygame.image.load("graphics/bullet.png")
 background = pygame.image.load("graphics/background.jpg")
 full_heart = pygame.transform.scale(pygame.image.load("graphics/full_heart.png"), (40, 40))
 empty_heart = pygame.transform.scale(pygame.image.load("graphics/empty_heart.png"), (40, 40))
-upgrade_double_img = pygame.transform.scale(pygame.image.load("graphics/upgrade_double.png"), (30, 30))  # Апгрейд для подвійного пострілу
-upgrade_diagonal_img = pygame.transform.scale(pygame.image.load("graphics/upgrade_diagonal.png"), (30, 30))  # Апгрейд для діагоналі
+upgrade_double_img = pygame.transform.scale(pygame.image.load("graphics/upgrade_double.png"), (30, 30))
+upgrade_diagonal_img = pygame.transform.scale(pygame.image.load("graphics/upgrade_diagonal.png"), (30, 30))
 
-# Масштабуємо фон до розмірів екрану
 background = pygame.transform.scale(background, (WIDTH + 300, HEIGHT))
 
 # ======= Класи ======= #
@@ -45,8 +46,8 @@ class Player(pygame.sprite.Sprite):
         self.mask = pygame.mask.from_surface(self.image)
         self.shoot_delay = 650
         self.last_shot = pygame.time.get_ticks()
-        self.double_shot = False  # Чи активовано подвійний постріл
-        self.diagonal_shot = False  # Чи активовано діагональні постріли
+        self.double_shot = False
+        self.diagonal_shot = False
 
     def update(self):
         keys = pygame.key.get_pressed()
@@ -64,25 +65,25 @@ class Player(pygame.sprite.Sprite):
             self.last_shot = now
 
     def shoot(self):
-        if self.double_shot and self.diagonal_shot:  # Два вперед і два по діагоналі
+        if self.double_shot and self.diagonal_shot:
             bullet1 = Bullet(self.rect.centerx - 10, self.rect.top, 0, -20)
             bullet2 = Bullet(self.rect.centerx + 10, self.rect.top, 0, -20)
             bullet3 = Bullet(self.rect.centerx, self.rect.top, -5, -20)
             bullet4 = Bullet(self.rect.centerx, self.rect.top, 5, -20)
             all_sprites.add(bullet1, bullet2, bullet3, bullet4)
             player_bullets.add(bullet1, bullet2, bullet3, bullet4)
-        elif self.double_shot:  # Два постріли вперед
+        elif self.double_shot:
             bullet1 = Bullet(self.rect.centerx - 10, self.rect.top, 0, -20)
             bullet2 = Bullet(self.rect.centerx + 10, self.rect.top, 0, -20)
             all_sprites.add(bullet1, bullet2)
             player_bullets.add(bullet1, bullet2)
-        elif self.diagonal_shot:  # Два постріли по діагоналі
+        elif self.diagonal_shot:
             bullet1 = Bullet(self.rect.centerx, self.rect.top, -5, -20)
             bullet2 = Bullet(self.rect.centerx, self.rect.top, 5, -20)
             bullet3 = Bullet(self.rect.centerx, self.rect.top, 0, -20)
             all_sprites.add(bullet1, bullet2, bullet3)
             player_bullets.add(bullet1, bullet2, bullet3)
-        else:  # Один постріл вперед
+        else:
             bullet = Bullet(self.rect.centerx, self.rect.top, 0, -20)
             all_sprites.add(bullet)
             player_bullets.add(bullet)
@@ -154,8 +155,7 @@ class Enemy(pygame.sprite.Sprite):
             self.kill()
             explosion = Explosion(self.rect.centerx, self.rect.centery)
             all_sprites.add(explosion)
-            # Шанс 30% на випадання апгрейду
-            if random.random() < 0.3:  # 30% шанс
+            if random.random() < 0.3:
                 upgrade_type = random.choice(["double", "diagonal"])
                 if upgrade_type == "double":
                     upgrade = UpgradeDouble(self.rect.centerx, self.rect.centery)
@@ -170,7 +170,7 @@ class UpgradeDouble(pygame.sprite.Sprite):
         self.image = upgrade_double_img
         self.rect = self.image.get_rect()
         self.rect.center = (x, y)
-        self.speed_y = 3  # Швидкість падіння
+        self.speed_y = 3
         self.mask = pygame.mask.from_surface(self.image)
 
     def update(self):
@@ -184,7 +184,7 @@ class UpgradeDiagonal(pygame.sprite.Sprite):
         self.image = upgrade_diagonal_img
         self.rect = self.image.get_rect()
         self.rect.center = (x, y)
-        self.speed_y = 3  # Швидкість падіння
+        self.speed_y = 3
         self.mask = pygame.mask.from_surface(self.image)
 
     def update(self):
@@ -221,7 +221,7 @@ class Game:
         self.playing = False
         self.paused = False
         self.player = Player()
-        player_group = pygame.sprite.GroupSingle(self.player)
+        self.player_group = pygame.sprite.GroupSingle(self.player)
         self.enemies = pygame.sprite.Group()
         self.bg_y = 0
         self.bg_speed = 2
@@ -256,7 +256,8 @@ class Game:
 
     def show_start_screen(self):
         screen.blit(background, (0, self.bg_y))
-        text = self.font.render("Знайти Луцького", True, WHITE)
+        text = self.font.render("Level 1:"
+                                "Знайти Луцького", True, WHITE)
         screen.blit(text, (WIDTH // 2 - text.get_width() // 2, HEIGHT // 2 - 100))
         waiting = True
         while waiting:
@@ -285,12 +286,25 @@ class Game:
                 if event.type == pygame.QUIT:
                     pygame.quit()
                     exit()
-            play_again_text = "Грати знову"
-            text_width = self.font.render(play_again_text, True, WHITE).get_width() + 40
-            if self.draw_button(play_again_text, WIDTH // 2 - text_width // 2, HEIGHT // 2 - 10, DARK_BLUE, WHITE_BLUE):
+            if self.draw_button("Грати знову", WIDTH // 2 - (self.font.render("Грати знову", True, WHITE).get_width() + 40) // 2, HEIGHT // 2 - 10, DARK_BLUE, WHITE_BLUE):
                 waiting = False
                 self.reset_game()
             pygame.display.flip()
+
+    def show_win_screen(self):
+        all_sprites.empty()
+        self.enemies.empty()
+        bullets.empty()
+        player_bullets.empty()
+        upgrades.empty()
+        screen.blit(background, (0, 0))
+        text1 = self.font.render("Ви перемогли!", True, GREEN)
+        text2 = self.font.render(f"Рахунок: {self.score}", True, WHITE)
+        screen.blit(text1, (WIDTH // 2 - text1.get_width() // 2, HEIGHT // 3 - 75))
+        screen.blit(text2, (WIDTH // 2 - text2.get_width() // 2, HEIGHT // 2 - 100))
+        pygame.display.flip()
+        pygame.time.wait(2000)  # Show win screen for 2 seconds
+        self.playing = False  # Exit game loop
 
     def show_pause_screen(self):
         overlay = pygame.Surface((WIDTH, HEIGHT))
@@ -320,15 +334,15 @@ class Game:
         self.level = 1
         self.last_level_update = pygame.time.get_ticks()
         self.enemy_spawn_time = 2000
-        self.player = Player()  # Створюємо нового гравця, щоб скинути апгрейди
+        self.player = Player()
         all_sprites.empty()
         self.enemies.empty()
         bullets.empty()
         player_bullets.empty()
         upgrades.empty()
         all_sprites.add(self.player)
-        player_group.empty()
-        player_group.add(self.player)
+        self.player_group.empty()
+        self.player_group.add(self.player)
         self.last_enemy_spawn = pygame.time.get_ticks()
         self.spawn_enemy()
 
@@ -361,6 +375,7 @@ class Game:
             if not self.paused:
                 self.update()
             self.draw()
+        return self.score >= 12  # Return True if won, False if lost or quit
 
     def events(self):
         for event in pygame.event.get():
@@ -400,8 +415,10 @@ class Game:
             if pygame.sprite.spritecollide(enemy, player_bullets, True, pygame.sprite.collide_mask):
                 enemy.hit()
                 self.score += 1
+                if self.score >= 12:
+                    self.show_win_screen()
+                    return  # Exit update to end game loop
 
-        # Перевірка зіткнень гравця з апгрейдами
         for upgrade in pygame.sprite.spritecollide(self.player, upgrades, True, pygame.sprite.collide_mask):
             if isinstance(upgrade, UpgradeDouble):
                 self.player.double_shot = True
@@ -443,13 +460,17 @@ class Game:
         self.draw_hearts()
         pygame.display.flip()
 
-# ======= Запуск гри ======= #
+# Групи
 all_sprites = pygame.sprite.Group()
 bullets = pygame.sprite.Group()
 player_group = pygame.sprite.GroupSingle()
 player_bullets = pygame.sprite.Group()
-upgrades = pygame.sprite.Group()  # Група для апгрейдів
-game = Game()
-game.run()
+upgrades = pygame.sprite.Group()
 
-pygame.quit()
+def run_level1():
+    game = Game()
+    return game.run()
+
+if __name__ == "__main__":
+    run_level1()
+    pygame.quit()
