@@ -8,7 +8,7 @@ pygame.init()
 WINDOW_WIDTH = 800
 WINDOW_HEIGHT = 600
 screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
-pygame.display.set_caption("Animated Character with Final Fight")
+pygame.display.set_caption("Animated Character with Obstacles")
 
 # Colors
 BLACK = (0, 0, 0)
@@ -20,13 +20,12 @@ GREEN = (0, 255, 0)
 normal_bg = pygame.image.load("bg.jpg").convert()
 normal_bg = pygame.transform.scale(normal_bg, (WINDOW_WIDTH * 2, WINDOW_HEIGHT))
 final_bg = pygame.image.load("bg2.png").convert()
-final_bg = pygame.transform.scale(final_bg, (WINDOW_WIDTH, WINDOW_HEIGHT))  # Single screen size for static
+final_bg = pygame.transform.scale(final_bg, (WINDOW_WIDTH, WINDOW_HEIGHT))
 bg_x = 0
 
 # Load house image and scale
 house_image = pygame.image.load("house.png").convert_alpha()
 house_image = pygame.transform.scale(house_image, (50, 50))
-
 
 # Player class
 class Player(pygame.sprite.Sprite):
@@ -141,7 +140,6 @@ class Player(pygame.sprite.Sprite):
         self.rect.y += self.velocity_y
         self.hitbox.center = self.rect.center
 
-        # Only scroll background in normal mode
         if not final_fight:
             bg_x -= self.velocity_x * 0.2
             if bg_x <= -WINDOW_WIDTH:
@@ -161,7 +159,6 @@ class Player(pygame.sprite.Sprite):
                 self.set_state("Idle", True)
 
         self.rect.clamp_ip(screen.get_rect())
-
 
 # House class
 class House(pygame.sprite.Sprite):
@@ -192,11 +189,28 @@ class House(pygame.sprite.Sprite):
         elif not self.final_fight and self.rect.right < 0:
             self.kill()
 
+# Construction class
+class Construction(pygame.sprite.Sprite):
+    def __init__(self, x):
+        super().__init__()
+        self.width = 50
+        self.height = 50
+        self.image = pygame.Surface((self.width, self.height))
+        self.image.fill(GRAY)
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = WINDOW_HEIGHT - self.height
+        self.hitbox = pygame.Rect(0, 0, self.width * 0.8, self.height * 0.8)
+        self.hitbox.center = self.rect.center
+
+    def update(self, dt):
+        self.hitbox.center = self.rect.center
 
 # Create sprite groups
 player = Player(WINDOW_WIDTH // 2, WINDOW_HEIGHT - 100)
 all_sprites = pygame.sprite.Group(player)
 houses = pygame.sprite.Group()
+constructions = pygame.sprite.Group()
 
 # Font
 font = pygame.font.SysFont(None, 74)
@@ -214,11 +228,15 @@ bar_width = 200
 bar_height = 20
 pixel_size = 4
 
+# Spawn settings
+house_spawn_timer = 0
+house_spawn_interval = 1.5
+construction_spawn_timer = 0
+construction_spawn_interval = 3.0
+
 # Game loop
 clock = pygame.time.Clock()
 running = True
-spawn_timer = 0
-spawn_interval = 1.5
 
 while running:
     dt = clock.tick(60) / 1000.0  # 60 FPS
@@ -227,16 +245,28 @@ while running:
     if not final_fight and player.distance_run >= distance_to_final_fight:
         final_fight = True
         houses.empty()
-        spawn_interval = 0.5
-        bg_x = 0  # Reset bg_x for static positioning
+        constructions.empty()
+        house_spawn_timer = 0
+        house_spawn_interval = 0.5
+        bg_x = 0
 
     # Spawn houses
-    spawn_timer += dt
-    if spawn_timer >= spawn_interval and not player.is_dead:
-        spawn_timer = 0
+    house_spawn_timer += dt
+    if house_spawn_timer >= house_spawn_interval and not player.is_dead:
+        house_spawn_timer = 0
         new_house = House(final_fight=final_fight)
         houses.add(new_house)
         all_sprites.add(new_house)
+        print(f"House spawned at {new_house.rect.x}, {new_house.rect.y}")  # Debug
+
+    # Spawn constructions (only in normal phase)
+    construction_spawn_timer += dt
+    if construction_spawn_timer >= construction_spawn_interval and not player.is_dead and not final_fight:
+        construction_spawn_timer = 0
+        new_construction = Construction(WINDOW_WIDTH)
+        constructions.add(new_construction)
+        all_sprites.add(new_construction)
+        print(f"Construction spawned at {new_construction.rect.x}, {new_construction.rect.y}")  # Debug
 
     # Update final fight timer
     if final_fight and not player.is_dead:
@@ -282,7 +312,7 @@ while running:
     # Update
     all_sprites.update(dt)
 
-    # Check collisions
+    # Check collisions with houses
     for house in houses:
         if player.hitbox.colliderect(house.hitbox):
             if player.is_attacking:
@@ -291,17 +321,25 @@ while running:
                 player.take_damage()
                 house.kill()
 
+    # Check collisions with constructions
+    for construction in constructions:
+        if player.hitbox.colliderect(construction.hitbox):
+            # if player.is_attacking:
+            #     construction.kill()
+            if not player.is_dead:
+                player.take_damage()
+                construction.kill()
+
     # Draw
     if final_fight:
-        # Static final background
         screen.blit(final_bg, (0, 0))
     else:
-        # Scrolling normal background
         screen.blit(normal_bg, (bg_x, 0))
         screen.blit(normal_bg, (bg_x + WINDOW_WIDTH, 0))
 
     all_sprites.draw(screen)
     houses.draw(screen)
+    constructions.draw(screen)
 
     # Display HP
     hp_text = font.render(f"HP: {player.hp}", True, WHITE)
@@ -311,12 +349,10 @@ while running:
     if not final_fight:
         progress = min(player.distance_run / distance_to_final_fight, 1)
         fill_width = int(bar_width * progress)
-
         for x in range(bar_x, bar_x + bar_width + pixel_size, pixel_size):
             for y in range(bar_y, bar_y + bar_height + pixel_size, pixel_size):
                 if x == bar_x or x == bar_x + bar_width or y == bar_y or y == bar_y + bar_height:
                     pygame.draw.rect(screen, WHITE, (x, y, pixel_size, pixel_size))
-
         for x in range(bar_x + pixel_size, bar_x + fill_width, pixel_size):
             for y in range(bar_y + pixel_size, bar_y + bar_height, pixel_size):
                 pygame.draw.rect(screen, GREEN, (x, y, pixel_size, pixel_size))
